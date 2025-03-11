@@ -14,15 +14,37 @@ export default defineConfig({
         vite: {
           build: {
             outDir: 'dist-electron',
-          },
-        },
+            rollupOptions: {
+              external: ['electron']
+            }
+          }
+        }
       },
+      {
+        entry: 'electron/preload.ts',
+        onstart(options) {
+          options.reload()
+        },
+        vite: {
+          build: {
+            outDir: 'dist-electron',
+            rollupOptions: {
+              external: ['electron']
+            }
+          }
+        }
+      }
     ]),
-    renderer(),
+    renderer()
   ],
+  base: process.env.NODE_ENV === 'development' ? '/' : './',
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
+      '@': path.resolve(__dirname, './src')
+    }
   },
+  server: {
+    host: '127.0.0.1',
+    port: 5173
+  }
 }) 

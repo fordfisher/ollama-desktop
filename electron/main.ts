@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, session } from 'electron'
 import path from 'node:path'
 import isDev from 'electron-is-dev'
 
@@ -19,12 +19,26 @@ let win: BrowserWindow | null
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 
 function createWindow() {
+  // Setup CSP
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self' 'unsafe-inline' http://localhost:* ws://localhost:*;"
+        ]
+      }
+    })
+  })
+
   win = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      nodeIntegration: true, // Required for Vite
+      contextIsolation: true,
+      webSecurity: true,
+      preload: path.join(__dirname, 'preload.js')
     },
   })
 
@@ -34,9 +48,11 @@ function createWindow() {
   })
 
   if (isDev) {
+    // In development, use the Vite dev server URL
     win.loadURL(VITE_DEV_SERVER_URL!)
     win.webContents.openDevTools()
   } else {
+    // In production, load the built file
     win.loadFile(path.join(process.env.DIST, 'index.html'))
   }
 }
@@ -47,7 +63,9 @@ app.on('window-all-closed', () => {
   }
 })
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  createWindow()
+})
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
